@@ -73,65 +73,6 @@ func main() {
 	flag.IntVar(&yadjust, "yadjust", 0, "radjust")
 	flag.Parse()
 
-	/*
-		http.HandleFunc("/mousedata", func(w http.ResponseWriter, r *http.Request) {
-
-
-				log.Println(r.FormValue("XPos"), r.FormValue("YPos"), r.FormValue("Width"), r.FormValue("Height"))
-				xpos, err := strconv.Atoi(r.FormValue("XPos"))
-				if err != nil {
-					log.Printf("Error parsing XPos:%s", r.FormValue("XPos"))
-					return
-				}
-
-				ypos, err := strconv.Atoi(r.FormValue("YPos"))
-				if err != nil {
-					log.Printf("Error parsing YPos: %s", r.FormValue("YPos"))
-					return
-				}
-
-				width, err := strconv.Atoi(r.FormValue("Width"))
-				if err != nil {
-					log.Printf("Error parsing Width: %s", r.FormValue("Width"))
-					return
-				}
-				height, err := strconv.Atoi(r.FormValue("Height"))
-				if err != nil {
-					log.Printf("Error parsing Height: %s", r.FormValue("Height"))
-					return
-				}
-
-				xpos = xpos + xadjust
-				if xpos < 0 {
-					xpos = 0
-				}
-				if xpos > width {
-					xpos = width
-				}
-
-				ypos = ypos + yadjust
-				if ypos < 0 {
-					ypos = 0
-				}
-				if ypos > height {
-					ypos = height
-				}
-
-				x := int(float64(xpos) / float64(width) * float64(scrWidth))
-				y := int(float64(ypos) / float64(height) * float64(scrHeight))
-				switch r.FormValue("EvtType") {
-				case "pan":
-					cmd := exec.Command("xdotool", "mousemove", strconv.Itoa(x), strconv.Itoa(y))
-					cmd.Run()
-				case "tap":
-					cmd := exec.Command("xdotool", "click", "1")
-					cmd.Run()
-				default:
-					log.Printf("Error: Unknown command %s", r.FormValue("EvtType"))
-				}
-
-		})*/
-
 	http.HandleFunc("/mousedata", func(w http.ResponseWriter, r *http.Request) {
 		params, err := parseNums(r, intParams)
 		if err != nil {
