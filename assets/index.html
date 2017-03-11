@@ -20,6 +20,8 @@
                 var blackdiv = document.getElementById("root");
                 var curX = evt.center.x;
                 var curY = evt.center.y;
+                var deltaX = evt.deltaX;
+                var deltaY = evt.deltaY;
                 var scrW = document.body.clientWidth;
                 var scrH = document.body.clientHeight;
                 var boxW = blackdiv.clientWidth;
@@ -35,6 +37,8 @@
                         scrH: scrH,
                         boxW: boxW,
                         boxH: boxH,
+                        deltaX: deltaX,
+                        deltaY: deltaY,
                         evtType: evtType
                     },
                     type: "POST"
