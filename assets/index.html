@@ -46,7 +46,9 @@
                 var hammertime = new Hammer(document.body);
                 hammertime.get('pan').set({ direction: Hammer.DIRECTION_ALL });
                 hammertime.on('tap',function(evt){ sendEvent(evt) });
-                hammertime.on('pan',function(evt){ sendEvent(evt) });
+                hammertime.on('panstart',function(evt){ sendEvent(evt) });
+                hammertime.on('panend',function(evt){ sendEvent(evt) });
+                hammertime.on('panmove',function(evt){ sendEvent(evt) });
             });
         </script>
     </body>

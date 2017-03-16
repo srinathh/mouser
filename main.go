@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"sync"
 )
 
 const (
@@ -64,16 +65,43 @@ func parseNums(r *http.Request, labels []string) (map[string]int, error) {
 	return ret, nil
 }
 
+type SyncXY struct {
+	sync.Mutex
+	x, y int
+}
+
+func NewSyncXY(x, y int) *SyncXY {
+	return &SyncXY{
+		x: x,
+		y: y,
+	}
+}
+
+func (l *SyncXY) SetPos(x, y int) {
+	l.Lock()
+	l.x = x
+	l.y = y
+	l.Unlock()
+}
+
+func (l *SyncXY) GetPos() (int, int) {
+	var x, y int
+	l.Lock()
+	x = l.x
+	y = l.y
+	l.Unlock()
+	return x, y
+}
+
 func main() {
 	var hostport string
-	var displayWidth, displayHeight, xadjust, yadjust int
+	var displayWidth, displayHeight int
+
+	lastPos := NewSyncXY(-1, -1)
 
 	flag.StringVar(&hostport, "http", ":9831", "which host port to start mouser server in")
 	flag.IntVar(&displayWidth, "width", 1366, "width of screen")
-	flag.IntVar(&displayHeight, "height", 768, "height of screen")
-	flag.IntVar(&xadjust, "xadjust", 0, "ladjust")
-	flag.IntVar(&yadjust, "yadjust", 0, "radjust")
-	flag.Parse()
+	flag.IntVar(&displayHeight, "height", 768, "width of screen")
 
 	http.HandleFunc("/mousedata", func(w http.ResponseWriter, r *http.Request) {
 		params, err := parseNums(r, intParams)
@@ -85,34 +113,74 @@ func main() {
 		log.Printf("%s: %v", r.FormValue(evtType), params)
 
 		switch r.FormValue(evtType) {
-		case "pan":
+		case "panstart":
+			lastPos.SetPos(params[curX], params[curY])
+		case "panend":
+			lastPos.SetPos(-1, -1)
+
+		case "panmove":
+			/*
+				boxLeft := (params[scrW] - params[boxW]) / 2
+				boxRight := params[scrW] - boxLeft
+				boxTop := (params[scrH] - params[boxH]) / 2
+				boxBtm := params[scrH] - boxTop
+
+				if params[curX] < boxLeft {
+					params[curX] = 0
+				}
+
+				if params[curX] > boxRight {
+					params[curX] = boxRight
+				}
+
+				if params[curY] < boxTop {
+					params[curY] = boxTop
+				}
+
+				if params[curY] > boxBtm {
+					params[curY] = boxBtm
+				}
+
+				lastX, lastY := lastPos.GetPos()
+
+				xPer := float32(params[curX]-boxLeft-lastX) / float32(params[boxW])
+				yPer := float32(params[curY]-boxTop-lastY) / float32(params[boxH])
+
+				lastPos.SetPos(params[curX], params[curY])
+				x := strconv.Itoa(int(xPer * float32(displayWidth)))
+				y := strconv.Itoa(int(yPer * float32(displayHeight)))
+			*/
+
+			lastX, lastY := lastPos.GetPos()
+			if lastX == -1 || lastY == -1 {
+				break
+			}
+
 			boxLeft := (params[scrW] - params[boxW]) / 2
 			boxRight := params[scrW] - boxLeft
 			boxTop := (params[scrH] - params[boxH]) / 2
 			boxBtm := params[scrH] - boxTop
 
-			if params[curX] < boxLeft {
-				params[curX] = 0
+			if params[curX] < boxLeft || params[curX] > boxRight {
+				break
 			}
 
-			if params[curX] > boxRight {
-				params[curX] = boxRight
+			if params[curY] < boxTop || params[curY] > boxBtm {
+				break
 			}
 
-			if params[curY] < boxTop {
-				params[curY] = boxTop
-			}
+			deltaX := params[curX] - lastX
+			deltaY := params[curY] - lastY
+			lastPos.SetPos(params[curX], params[curY])
 
-			if params[curY] > boxBtm {
-				params[curY] = boxBtm
-			}
+			amplifyX := float32(displayWidth) / float32(params[boxW])
+			amplifyY := float32(displayHeight) / float32(params[boxH])
 
-			xPer := float32(params[curX]-boxLeft) / float32(params[boxW])
-			yPer := float32(params[curY]-boxTop) / float32(params[boxH])
+			scrDeltaX := int(amplifyX * float32(deltaX))
+			scrDeltaY := int(amplifyY * float32(deltaY))
 
-			x := int(xPer * float32(displayWidth))
-			y := int(yPer * float32(displayHeight))
-			exec.Command("xdotool", "mousemove", strconv.Itoa(x), strconv.Itoa(y)).Run()
+			log.Println(scrDeltaX, scrDeltaY)
+			exec.Command("xdotool", "mousemove_relative", "--", strconv.Itoa(scrDeltaX), strconv.Itoa(scrDeltaY)).Run()
 		case "tap":
 			exec.Command("xdotool", "click", "1").Run()
 		default:
